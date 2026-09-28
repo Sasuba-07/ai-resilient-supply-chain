@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Resilient Supply Chain Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f5f9;--card:#fff;--tx:#1b2333;--mut:#667085;--bd:#e4e8f0;--blue:#1f4fd8;--green:#16a34a;--orange:#f59e0b;--red:#dc2626;--purple:#7c3aed;--sh:0 4px 16px rgba(20,30,60,.08)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1420;--card:#182033;--tx:#e8ecf5;--mut:#98a2b8;--bd:#2a3550;--sh:0 4px 16px rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--bg:#0f1420;--card:#182033;--tx:#e8ecf5;--mut:#98a2b8;--bd:#2a3550;--sh:0 4px 16px rgba(0,0,0,.4)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,"Segoe UI",system-ui,Arial,sans-serif;line-height:1.4}
+header{background:var(--blue);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+header h1{margin:0;font-size:1.2rem}header p{margin:2px 0 0;font-size:.8rem;opacity:.85}
+.bell{position:relative;background:rgba(255,255,255,.18);border:0;color:#fff;font-size:1.2rem;width:42px;height:42px;border-radius:50%;cursor:pointer}
+.bell b{position:absolute;top:-2px;right:-2px;background:var(--red);font-size:.65rem;border-radius:9px;padding:1px 5px;display:none}
+main{max-width:1200px;margin:0 auto;padding:18px;display:grid;gap:18px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--sh);padding:16px}
+.card h3{margin:0 0 8px;font-size:1rem}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.kpi small{color:var(--mut);font-weight:600}.kpi .v{font-size:1.7rem;font-weight:700;margin-top:4px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:8px 0}
+.node{width:150px;text-align:center;padding:14px 8px;border-radius:14px;border:2px solid var(--bd);transition:.4s}
+.node .ic{font-size:2.2rem}.node .st{font-size:.8rem;font-weight:600;min-height:1.2em}
+.node.bad{border-color:var(--red);background:rgba(220,38,38,.1);color:var(--red);animation:pulse 1s infinite}
+.node.ok{border-color:var(--green)}
+.arrow{flex:1;min-width:50px;max-width:130px;height:4px;background:repeating-linear-gradient(90deg,var(--blue) 0 10px,transparent 10px 20px);background-size:20px 4px;animation:move 1s linear infinite;border-radius:2px}
+.arrow.off{background:var(--red);animation:none;opacity:.5}
+@keyframes move{to{background-position:20px 0}}@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(220,38,38,.15)}}
+.cta{display:block;margin:0 auto;padding:16px 34px;font-size:1.1rem;font-weight:700;border:0;border-radius:14px;background:var(--blue);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(31,79,216,.35)}
+.cta:disabled{opacity:.6;cursor:wait}
+.btn{padding:10px 20px;border:0;border-radius:10px;color:#fff;font-weight:600;cursor:pointer}
+.agent{border-top:5px solid var(--c);position:relative;min-height:190px}
+.agent .badge{float:right;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--c);color:#fff}
+.agent ul{list-style:none;padding:0;margin:8px 0 0}.agent li{padding:3px 0;font-size:.92rem}.agent li b{color:var(--c)}
+.wait{color:var(--mut);font-size:.9rem}
+.spin{display:inline-block;width:18px;height:18px;border:3px solid var(--bd);border-top-color:var(--blue);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.coord{border:2px solid var(--blue)}
+.feeds{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.feeds span{font-size:.78rem;padding:4px 10px;border-radius:99px;border:1px solid var(--bd)}
+.decision{list-style:none;padding:0;margin:8px 0}.decision li{padding:8px 12px;margin:6px 0;border-radius:10px;background:rgba(31,79,216,.08);font-weight:600}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.cw{position:relative;height:260px}
+.risk{padding:14px;border-radius:12px;font-weight:700;color:#fff;text-align:center;transition:.5s}
+.scores{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.scores div{flex:1;min-width:90px;text-align:center;font-size:.8rem;color:var(--mut);padding:8px;border:1px solid var(--bd);border-radius:10px}
+.scores b{display:block;font-size:1.2rem;color:var(--tx)}
+.big{font-size:3rem;font-weight:800;text-align:center;margin-top:10px}
+.bar{height:10px;background:var(--bd);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;width:92%;background:var(--green);transition:width .3s,background .3s}
+#toasts{position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 70px);display:grid;gap:8px;z-index:50;max-width:calc(100% - 28px)}
+.toast{background:var(--card);border-left:5px solid var(--red);padding:10px 14px;border-radius:10px;box-shadow:var(--sh);animation:in .3s;font-size:.9rem}
+@keyframes in{from{transform:translateX(40px);opacity:0}}
+.ok-msg{font-size:1.2rem;font-weight:700;color:var(--green);animation:pop .5s}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.hide{display:none}.up{color:var(--mut);font-size:.8rem}
+.coordrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:18px}
+@media(max-width:820px){.coordrow{grid-template-columns:1fr}}
+.tw{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:.88rem;min-width:640px}
+.t th{text-align:left;background:rgba(31,79,216,.1);padding:9px 10px;font-size:.78rem;white-space:nowrap}
+.t td{padding:9px 10px;border-top:1px solid var(--bd)}
+.t tr.sel td{background:rgba(22,163,74,.14);font-weight:700}
+.t tr.rej td{opacity:.55}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;color:#fff;font-size:.74rem;font-weight:700}
+.p-PASS{background:var(--green)}.p-REVIEW{background:var(--orange)}.p-FAIL{background:var(--red)}.p-NA{background:var(--mut)}
+.qccard{border-top:5px solid var(--green)}
+.shield{text-align:center;margin:4px 0 8px}
+.kv{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed var(--bd);font-size:.92rem}
+footer{text-align:center;color:var(--mut);font-size:.8rem;padding:6px 0 20px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>AI Resilient Supply Chain Dashboard</h1><p>L&amp;T TECHgium 2026 – Multi-Agent Proof of Concept</p></div>
+  <button class="bell" id="bell" title="Notifications">🔔<b id="cnt">0</b></button>
+</header>
+<div id="toasts"></div>
+<main>
+  <section class="grid4">
+    <div class="card kpi"><small>Current Demand</small><div class="v" id="kDemand">–</div></div>
+    <div class="card kpi"><small>Inventory Available</small><div class="v" id="kInv">–</div></div>
+    <div class="card kpi"><small>Lead Time</small><div class="v" id="kLead">–</div></div>
+    <div class="card kpi"><small>Supplier Status</small><div class="v" id="kSup">🟢 Active</div></div>
+  </section>
+
+  <section class="card">
+    <h3>Supply Chain Flow <span class="up" id="src"></span></h3>
+    <div class="flow">
+      <div class="node ok" id="nSup"><div class="ic">🏭🚚</div><b>Supplier</b><div class="st" id="supSt">Operational</div></div>
+      <div class="arrow" id="a1"></div>
+      <div class="node ok"><div class="ic">⚙️</div><b>Factory</b><div class="st">Producing</div></div>
+      <div class="arrow"></div>
+      <div class="node ok"><div class="ic">📦👤</div><b>Customer</b><div class="st">Being served</div></div>
+    </div>
+    <div style="margin-top:14px"><button class="cta" id="simBtn">Simulate 7-Day Supplier Shutdown</button>
+    <p class="up" style="text-align:center">Data: supply_chain_data.csv (auto-loaded; sample used if file not found) · <a href="#" id="upl">load your own CSV</a></p>
+    <input type="file" id="file" accept=".csv" class="hide"></div>
+  </section>
+
+  <section>
+    <div class="grid4" id="agents">
+      <div class="card agent" style="--c:var(--blue)" id="ag0"><span class="badge" id="b0">Idle</span><h3>📈 Demand Agent</h3><div class="wait">Waiting for trigger…</div></div>
+      <div class="card agent" style="--c:var(--orange)" id="ag1"><span class="badge" id="b1">Idle</span><h3>🗄️ Inventory Agent</h3><div class="wait">Waiting for trigger…</div></div>
+      <div class="card agent" style="--c:var(--red)" id="ag2"><span class="badge" id="b2">Idle</span><h3>⚠️ Supplier Risk Agent</h3><div class="wait">Waiting for trigger…</div></div>
+      <div class="card agent" style="--c:var(--purple)" id="ag3"><span class="badge" id="b3">Idle</span><h3>🚛 Logistics Agent</h3><div class="wait">Waiting for trigger…</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>🔎 Supplier Quality Validation</h3>
+    <div class="tw"><table class="t"><thead><tr><th>Supplier Name</th><th>Lead Time (Days)</th><th>Additional Logistics Cost (%)</th><th>Quality Score (%)</th><th>Defect Rate (%)</th><th>QC Status</th><th>Capacity (Units)</th><th>AI Recommendation</th></tr></thead><tbody id="valBody"></tbody></table></div>
+  </section>
+
+  <section class="coordrow">
+  <div class="card coord">
+    <h3>🧠 Coordinator Agent</h3>
+    <div class="feeds"><span>Demand ➜</span><span>Inventory ➜</span><span>Supplier Risk ➜</span><span>Logistics ➜</span><span><b>Coordinator</b></span></div>
+    <div id="coordBody" class="wait">Awaiting agent outputs…</div>
+  </div>
+  <div class="card qccard">
+    <h3>Quality Control (QC) Verification</h3>
+    <div id="qcBody" class="wait">Awaiting supplier selection…</div>
+  </div>
+  </section>
+
+
+  <section class="card hide" id="planner">
+    <h3>👤 Human Planner</h3>
+    <p><b>Planner Review Required</b></p>
+    <div id="plBtns"><button class="btn" style="background:var(--green)" id="apprBtn">Approve Plan</button>
+    <button class="btn" style="background:var(--red);margin-left:8px" id="rejBtn">Reject Plan</button></div>
+    <div id="plMsg"></div>
+  </section>
+
+  <section class="two">
+    <div class="card"><h3>Demand vs Inventory</h3><div class="cw"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h3>Transport Cost Comparison</h3><div class="cw"><canvas id="c2"></canvas></div></div>
+  </section>
+
+  <section class="card">
+    <h3>Risk Summary &amp; Resilience Score</h3>
+    <div class="risk" id="riskBox" style="background:var(--green)">Low Risk</div>
+    <div class="big" id="score">92</div><div class="bar"><i id="scoreBar"></i></div>
+    <div class="scores"><div>Before<b>92/100</b></div><div>After disruption<b>61/100</b></div><div>After AI plan<b>88/100</b></div></div>
+  </section>
+</main>
+<footer>Rule-based simulation – not real AI. Prototype for L&amp;T TECHgium.</footer>
+
+<script>
+/* ============ 1. DATA LAYER ============ */
+const SAMPLE_CSV=`Supplier name,Supplier Status,Stock levels,Number of products sold,Order quantities,Lead times,Production volumes,Shipping costs,Transportation modes,Routes,Availability
+Supplier 1,Active,58,520,26,5,215,210.5,Road,Route B,55
+Supplier 2,Active,64,460,31,4,320,190.2,Road,Route A,70
+Supplier 3,Active,52,510,22,6,280,230.8,Road,Route C,48
+Supplier 4,Active,70,480,35,5,150,150.4,Rail,Route A,82
+Supplier 5,Active,61,505,29,7,410,170.9,Rail,Route B,65
+Supplier 6,Active,55,430,24,3,190,255.3,Air,Route C,90
+Supplier 7,Active,48,540,27,4,260,268.7,Air,Route A,77
+Supplier 8,Active,62,490,33,6,330,120.6,Sea,Route B,60`;
+let DATA=[],M={}; // M = metrics computed from dataset
+
+function parseCSV(t){const L=t.trim().split(/\r?\n/);const H=L[0].split(',').map(h=>h.trim().toLowerCase());
+  return L.slice(1).map(l=>{const c=l.split(',');const o={};H.forEach((h,i)=>o[h]=(c[i]||'').trim());return o});}
+const num=(r,k)=>parseFloat(r[Object.keys(r).find(x=>x.includes(k))])||0;
+const txt=(r,k)=>r[Object.keys(r).find(x=>x.includes(k))]||'';
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+
+async function loadData(){
+  let t=SAMPLE_CSV,src='sample dataset';
+  try{const r=await fetch('supply_chain_data.csv');if(r.ok){t=await r.text();src='supply_chain_data.csv';}}catch(e){}
+  setData(t,src);
+}
+function setData(t,src){
+  DATA=parseCSV(t);
+  const by=m=>DATA.filter(r=>txt(r,'transportation').toLowerCase().includes(m));
+  const modeAvg=m=>avg(by(m).map(r=>num(r,'shipping')));
+  const road=modeAvg('road')||avg(DATA.map(r=>num(r,'shipping')));
+  const air=modeAvg('air')||road*1.3;
+  const alt=[...DATA].sort((a,b)=>num(b,'availability')-num(a,'availability'))[0];
+  M={demand:Math.round(DATA.reduce((s,r)=>s+num(r,'products sold'),0)/30),
+     orderQty:Math.round(avg(DATA.map(r=>num(r,'order quantities')))),
+     stock:Math.round(DATA.reduce((s,r)=>s+num(r,'stock'),0)),
+     avail:Math.round(avg(DATA.map(r=>num(r,'availability')))),
+     lead:Math.round(avg(DATA.map(r=>num(r,'lead')))),
+     road,air,routes:[...new Set(DATA.map(r=>txt(r,'routes')))].join(', '),
+     altName:alt?txt(alt,'supplier name'):'Supplier B'};
+  M.safety=M.demand*3; M.inv=M.stock;
+  document.getElementById('src').textContent='· source: '+src+' ('+DATA.length+' rows)';
+  renderKPIs();
+}
+
+/* ============ 1b. SUPPLIER QUALITY & QC MODULE ============ */
+// Supplier QC master data (simulated; the dataset has no quality columns)
+const SUPPLIERS=[
+ {name:'Supplier A',lead:2,extra:24,q:98,d:0.8,cap:100},
+ {name:'Supplier B',lead:3,extra:12,q:95,d:1.5,cap:120},
+ {name:'Supplier C',lead:4,extra:6,q:90,d:3.8,cap:80},
+ {name:'Supplier D',lead:5,extra:0,q:86,d:6.2,cap:150}];
+// QC rule: >=95 & defects<=2% PASS; 90-94 REVIEW; <90 FAIL
+function qcStatus(q,d){if(q>=95&&d<=2)return'PASS';if(q>=90)return'REVIEW';return'FAIL';}
+const pill=st=>`<span class="pill p-${st}">${st}</span>`;
+const pend='<span class="pill p-NA">PENDING</span>';
+const pct=x=>x?'+'+x+'%':'0%';
+/* Compare every supplier and pick the best one */
+function evaluateSuppliers(){
+  SUPPLIERS.forEach(s=>{s.qc=qcStatus(s.q,s.d);s.rec='Rejected';});
+  let pool=SUPPLIERS.filter(s=>s.qc!=='FAIL');            // 1. remove QC FAIL
+  const pass=pool.filter(s=>s.qc==='PASS');                // 2. prefer PASS
+  if(pass.length)pool=pass;
+  pool.sort((a,b)=>b.q-a.q);                               // 3. highest quality
+  let best=pool[0];
+  if(best){const top=best;best=pool.filter(s=>top.q-s.q<=1).sort((a,b)=>a.lead-b.lead)[0];} // 4. similar quality -> shorter lead time
+  const ranked=SUPPLIERS.filter(s=>s.qc!=='FAIL').sort((a,b)=>a===best?-1:b===best?1:(a.qc===b.qc?b.q-a.q:(a.qc==='PASS'?-1:1)));
+  ranked.forEach((s,i)=>s.rec=i===0?'Recommended':i===1?'Alternative':'Backup');
+  S.sel=best||null;S.evaluated=true;if(best)M.altName=best.name;
+}
+function renderValidation(){
+  $('valBody').innerHTML=SUPPLIERS.map(s=>{const e=S.evaluated;
+    return `<tr class="${S.sel===s?'sel':''} ${e&&s.qc==='FAIL'?'rej':''}"><td>${s.name}</td><td>${s.lead} Days</td><td>${pct(s.extra)}</td><td>${s.q}%</td><td>${s.d}%</td><td>${e?pill(s.qc):pend}</td><td>${s.cap}</td><td>${e?s.rec:'—'}</td></tr>`}).join('');
+}
+/* Comparison table shown inside the Coordinator card */
+function cmpTable(){
+  const rows=SUPPLIERS.map(s=>{const sel=S.sel===s,out=s.qc==='FAIL';
+    return `<tr class="${sel?'sel':''} ${out?'rej':''}"><td>${s.name}</td><td>${s.lead}d</td><td>${pct(s.extra)}</td><td>${s.q}%</td><td>${s.d}%</td><td>${s.cap}</td><td>${pill(s.qc)}</td><td>${sel?'✔ Selected':out?'Removed (QC FAIL)':'Considered'}</td></tr>`}).join('');
+  return `<p><b>Supplier Comparison</b></p><div class="tw"><table class="t"><thead><tr><th>Supplier</th><th>Lead</th><th>Extra Cost</th><th>Quality</th><th>Defects</th><th>Capacity</th><th>QC</th><th>Decision</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p>Final recommended supplier: <b>${S.sel?S.sel.name:'None – all suppliers failed QC'}</b></p>`;
+}
+const shield=(c,m)=>`<svg width="58" height="58" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="${c}"/><path d="${m}" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+function renderQC(){
+  const s=S.sel;
+  if(!s){$('qcBody').innerHTML='<div class="shield">'+shield('#dc2626','M8 8l8 8M16 8l-8 8')+'</div><p><b>No supplier passed QC</b></p>';return;}
+  const ic={PASS:shield('#16a34a','M8 12l3 3 5-6'),REVIEW:shield('#f59e0b','M12 8v5M12 16v.5'),FAIL:shield('#dc2626','M8 8l8 8M16 8l-8 8')}[s.qc];
+  const insp={PASS:'Completed – Passed',REVIEW:'Manual Review Pending',FAIL:'Failed'}[s.qc];
+  $('qcBody').classList.remove('wait');
+  $('qcBody').innerHTML=`<div class="shield">${ic}</div>
+   <div class="kv"><span>Selected Supplier</span><b>${s.name}</b></div><div class="kv"><span>Quality Score</span><b>${s.q}%</b></div>
+   <div class="kv"><span>Defect Rate</span><b>${s.d}%</b></div><div class="kv"><span>Inspection Status</span><b>${insp}</b></div>
+   <div class="kv"><span>QC Status</span>${pill(s.qc)}</div>`;
+}
+/* Planner may approve only when the selected supplier's QC is PASS */
+function gatePlanner(){
+  const ok=S.sel&&S.sel.qc==='PASS';$('apprBtn').disabled=!ok;$('apprBtn').style.opacity=ok?1:.5;
+  $('plMsg').innerHTML=ok?'':'<p style="color:var(--red);font-weight:600">⛔ Approval blocked: selected supplier has not passed QC (PASS required).</p>';
+}
+
+/* ============ 2. STATE & HELPERS ============ */
+const S={shutdown:false,mode:'healthy',expressUnits:100,out:{}};
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function renderKPIs(){
+  $('kDemand').textContent=M.demand+' units/day';$('kInv').textContent=M.inv+' units';
+  $('kLead').textContent=M.lead+' days';
+  $('kSup').textContent=S.shutdown?'🔴 Shutdown':'🟢 Active';
+}
+let n=0;
+function toast(msg,color){n++;$('cnt').style.display='inline';$('cnt').textContent=n;
+  const d=document.createElement('div');d.className='toast';d.textContent=msg;if(color)d.style.borderLeftColor=color;
+  $('toasts').appendChild(d);setTimeout(()=>d.remove(),4200);}
+function fillAgent(i,badge,html){$('b'+i).textContent=badge;$('ag'+i).querySelector('.wait,ul')?.remove();
+  $('ag'+i).insertAdjacentHTML('beforeend',html);}
+function thinking(i){$('b'+i).textContent='Thinking…';$('ag'+i).querySelector('.wait,ul')?.remove();
+  $('ag'+i).insertAdjacentHTML('beforeend','<div class="wait"><span class="spin"></span>Analyzing…</div>');}
+function animateScore(to,color){const el=$('score');let v=+el.textContent;
+  const t=setInterval(()=>{v+=v<to?1:-1;el.textContent=v;$('scoreBar').style.width=v+'%';
+    if(v===to)clearInterval(t);},25);$('scoreBar').style.background=color;el.style.color=color;}
+function setRisk(level){const m={Low:['var(--green)','Low Risk'],Medium:['var(--orange)','Medium Risk'],High:['var(--red)','High Risk']}[level];
+  $('riskBox').style.background=m[0];$('riskBox').textContent=m[1];}
+
+/* ============ 3. AGENTS (rule-based) ============ */
+function analyzeDemand(){
+  const level=M.demand>100?'High':'Normal';
+  const conf=Math.min(98,90+Math.round(DATA.length/2));
+  return {demand:M.demand,level,conf,html:`<ul><li>Demand: <b>${M.demand} units/day</b></li><li>Avg order qty: <b>${M.orderQty}</b></li>
+  <li>Priority: <b>${level}</b></li><li>Confidence: <b>${conf}%</b></li></ul>`,badge:level};
+}
+function analyzeInventory(){
+  const cov=(M.inv/M.demand).toFixed(1),low=M.inv<M.safety;
+  return {stock:M.inv,cov,low,html:`<ul><li>Current Stock: <b>${M.inv}</b></li><li>Coverage: <b>${cov} days</b></li>
+  <li>Safety stock: <b>${M.safety}</b></li><li>Avg availability: <b>${M.avail}%</b></li>
+  <li>${low?'⚠️ <b>Low Stock Detected</b>':'✅ Stock healthy'}</li></ul>`,badge:low?'Low':'OK'};
+}
+function analyzeSupplierRisk(){
+  const risk=S.shutdown?'High':'Low';
+  return {risk,html:`<ul><li><b>${S.shutdown?'Critical Supplier Offline':'Supplier operating normally'}</b></li>
+  <li>Risk level: <b>${risk}</b></li><li>Impact Duration: <b>${S.shutdown?'7 Days':'None'}</b></li>
+  <li>Alternate found: <b>${M.altName}</b></li></ul>`,badge:risk};
+}
+function analyzeLogistics(){
+  const eta=M.lead,fast=Math.max(1,Math.round(eta*0.4)),pct=Math.round((M.air-M.road)/M.road*100);
+  return {eta,fast,pct,html:`<ul><li>Recommended Mode: <b>Express (Air/Truck)</b></li><li>ETA Reduction: <b>${eta} Days → ${fast} Days</b></li>
+  <li>Additional Cost: <b>+${pct}%</b></li><li>Routes: <b>${M.routes}</b></li></ul>`,badge:'Express'};
+}
+
+/* ============ 4. COORDINATOR ============ */
+function coordinatorDecision(d,i,s,l){
+  const actions=[];
+  const delay=l.eta+3;                       // transport delay under disruption
+  if(s.risk==='High'&&i.low)actions.push(`Activate Alternate Supplier (${M.altName})`);          // Rule 1
+  if(delay>M.lead)actions.push(`Express Shipping for ${S.expressUnits} Units`);                  // Rule 3
+  if(d.level==='High')actions.push('Reserve Inventory for Priority Orders');                     // Rule 2
+  actions.push('Maintain 95% Service Level');
+  const cost=Math.round(S.expressUnits*M.air), base=Math.round(S.expressUnits*M.road);
+  return {actions,cost,base,improve:Math.round((1-l.fast/l.eta)*100),
+    html:cmpTable()+`<ul class="decision">${actions.map(a=>'<li>✔ '+a+'</li>').join('')}</ul>
+    <p>Estimated express cost: <b>$${cost.toLocaleString()}</b> (vs $${base.toLocaleString()} normal) · Delivery time improvement: <b>${l.eta}d → ${l.fast}d (${Math.round((1-l.fast/l.eta)*100)}% faster)</b></p>`};
+}
+
+/* ============ 5. SIMULATION FLOW ============ */
+async function simulate(){
+  const btn=$('simBtn');btn.disabled=true;btn.textContent='Agents analyzing…';
+  S.shutdown=true;S.mode='disrupted';M.inv=Math.round(M.stock*0.65);
+  $('nSup').className='node bad';$('supSt').textContent='Shutdown – 7 Days';$('a1').classList.add('off');
+  renderKPIs();setRisk('High');animateScore(61,'var(--red)');updateCharts();
+  toast('🚨 Critical Supplier Offline','var(--red)');await sleep(700);toast('📉 Inventory Below Threshold','var(--orange)');
+  toast('🔍 Comparing suppliers & running QC…','var(--blue)');evaluateSuppliers();renderValidation();
+  for(let i=0;i<4;i++)thinking(i);
+  $('coordBody').innerHTML='<span class="spin"></span>Waiting for agents…';
+  const fns=[analyzeDemand,analyzeInventory,analyzeSupplierRisk,analyzeLogistics];
+  for(let i=0;i<4;i++){await sleep(900);const o=fns[i]();S.out[i]=o;fillAgent(i,o.badge,o.html);}
+  await sleep(700);toast('🏭 Alternate Supplier Identified: '+M.altName,'var(--blue)');
+  const c=coordinatorDecision(S.out[0],S.out[1],S.out[2],S.out[3]);S.out.c=c;
+  $('coordBody').innerHTML='<b>Final Recommendation</b>'+c.html;
+  await sleep(500);toast('🚚 Express Logistics Activated','var(--purple)');
+  updateCharts();$('planner').classList.remove('hide');$('plMsg').innerHTML='';$('plBtns').classList.remove('hide');
+  renderQC();gatePlanner();
+  $('planner').scrollIntoView({behavior:'smooth',block:'center'});
+  btn.textContent='Simulation complete – awaiting planner';
+}
+function approvePlan(){
+  if(!S.sel||S.sel.qc!=='PASS'){toast('⛔ Approval blocked: QC not PASS','var(--red)');return;}
+  S.mode='mitigated';S.shutdown=true;M.inv=Math.round(M.stock*0.9);
+  $('plBtns').classList.add('hide');
+  $('plMsg').innerHTML='<div class="ok-msg">✅ Plan Approved Successfully</div>';
+  $('nSup').className='node ok';$('supSt').textContent='Alternate: '+M.altName;$('a1').classList.remove('off');
+  $('kSup').textContent='🟠 Alternate Active';renderKPIs();$('kSup').textContent='🟠 Alternate Active';
+  setRisk('Medium');animateScore(88,'var(--green)');updateCharts();
+  toast('✅ Plan approved – executing','var(--green)');
+  $('simBtn').disabled=false;$('simBtn').textContent='Simulate 7-Day Supplier Shutdown';
+}
+function rejectPlan(){
+  $('plMsg').innerHTML='<div class="ok-msg" style="color:var(--orange)">🔄 Recalculate Strategy</div><button class="btn" style="background:var(--blue);margin-top:8px" id="recalc">Recalculate</button>';
+  $('recalc').onclick=()=>{S.expressUnits+=50;const o=S.out,c=coordinatorDecision(o[0],o[1],o[2],o[3]);S.out.c=c;
+    $('coordBody').innerHTML='<b>Revised Recommendation</b>'+c.html;updateCharts();$('plMsg').innerHTML='';
+    toast('Strategy recalculated: '+S.expressUnits+' units express','var(--blue)');};
+}
+
+/* ============ 6. CHARTS ============ */
+let c1,c2;
+function series(){
+  const days=Array.from({length:14},(_,i)=>'Day '+(i+1));
+  const dem=days.map((_,i)=>Math.round(M.demand*(1+0.06*Math.sin(i))));
+  const inv=days.map((_,i)=>{
+    if(S.mode==='healthy')return Math.round(M.stock*(0.95+0.05*Math.cos(i)));
+    const d=i-2; if(d<0)return M.stock;
+    if(S.mode==='disrupted')return Math.max(0,Math.round(M.stock-d*M.demand*0.5));
+    return d<3?Math.max(0,Math.round(M.stock-d*M.demand*0.5)):Math.round(Math.min(M.stock*0.9,M.stock*0.35+(d-3)*M.demand*0.4));
+  });
+  return {days,dem,inv};
+}
+function initCharts(){
+  const s=series();
+  c1=new Chart($('c1'),{type:'line',data:{labels:s.days,datasets:[
+    {label:'Demand',data:s.dem,borderColor:'#1f4fd8',backgroundColor:'#1f4fd8',tension:.3},
+    {label:'Inventory',data:s.inv,borderColor:'#16a34a',backgroundColor:'#16a34a',tension:.3}]},
+    options:{maintainAspectRatio:false,scales:{y:{title:{display:true,text:'Units'}},x:{title:{display:true,text:'Days'}}}}});
+  c2=new Chart($('c2'),{type:'bar',data:{labels:['Normal Shipping','Express Shipping'],datasets:[{label:'Cost ($)',data:[0,0],backgroundColor:['#1f4fd8','#dc2626']}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'Cost for '+S.expressUnits+' units ($)'}}}}});
+  updateCharts();
+}
+function updateCharts(){
+  const s=series();c1.data.datasets[0].data=s.dem;c1.data.datasets[1].data=s.inv;c1.update();
+  c2.data.datasets[0].data=[Math.round(S.expressUnits*M.road),Math.round(S.expressUnits*M.air)];
+  c2.options.scales.y.title.text='Cost for '+S.expressUnits+' units ($)';c2.update();
+}
+
+/* ============ 7. INIT ============ */
+$('simBtn').onclick=simulate;$('apprBtn').onclick=approvePlan;$('rejBtn').onclick=rejectPlan;
+$('bell').onclick=()=>toast(n?n+' notifications this session':'No notifications yet','var(--blue)');
+$('upl').onclick=e=>{e.preventDefault();$('file').click()};
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{setData(r.result,f.name);updateCharts();toast('Dataset loaded: '+f.name,'var(--green)')};r.readAsText(f);};
+loadData().then(()=>{initCharts();renderValidation();});
+</script>
+</body>
+</html>
